@@ -124,4 +124,4 @@ ExceptionHandlingTest 使用 Spring Boot 上下文和 MockMvc 验证真实 MVC �
 覆盖共享业务策略、多个候选优先级、未登记子类、cause 边界、真实参数校验、默认响应脱敏和日志堆栈、注册配置。
 测试结果及实际 HTTP 请求验证记录见 VERIFICATION.md。
 
-此仓库当前是本地示例，尚未发布远程地址。后续发布后将真实链接补入文章；不得用示例 URL 冒充仓库地址。
+完整示例仓库：[naruto055/exception-dispatch-demo](https://github.com/naruto055/exception-dispatch-demo)
