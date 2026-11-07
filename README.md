@@ -48,8 +48,8 @@ DemoController 抛出异常
 | GlobalExceptionAdvice | 框架接入、未知异常日志、HTTP 输出 |
 | ApiResponse | code、message 对外契约 |
 
-验证码和密码错误都由 BusinessExceptionHandler 转换。错误码不绑定处理器。
-AccountLockedExceptionHandler 的专用提示用于展示子类覆盖；实际项目仅在行为有差异时拆分处理器。
+验证码、密码错误和普通账号锁定都由 BusinessExceptionHandler 转换。错误码不绑定处理器。
+普通账号锁定使用 `/demo/business?type=locked`，抛出携带 ACCOUNT_LOCKED 的 BusinessException，对应文章中的基础场景。`/demo/locked` 则抛出 AccountLockedException，仅作为子类规则与优先级的扩展示例；两者返回相同结果，实际项目仅在处理行为有差异时拆分处理器。
 
 ## 实际请求
 
@@ -58,6 +58,7 @@ PowerShell：
 ~~~powershell
 Invoke-RestMethod 'http://localhost:8080/demo/business?type=captcha'
 Invoke-RestMethod 'http://localhost:8080/demo/business?type=password'
+Invoke-RestMethod 'http://localhost:8080/demo/business?type=locked'
 Invoke-RestMethod 'http://localhost:8080/demo/locked'
 Invoke-RestMethod 'http://localhost:8080/demo/validation' -Method Post -ContentType 'application/json' -Body '{"name":""}'
 Invoke-RestMethod 'http://localhost:8080/demo/unexpected'
@@ -68,6 +69,7 @@ Invoke-RestMethod 'http://localhost:8080/demo/unexpected'
 ~~~sh
 curl -i 'http://localhost:8080/demo/business?type=captcha'
 curl -i 'http://localhost:8080/demo/business?type=password'
+curl -i 'http://localhost:8080/demo/business?type=locked'
 curl -i 'http://localhost:8080/demo/locked'
 curl -i -H 'Content-Type: application/json' -d '{"name":""}' 'http://localhost:8080/demo/validation'
 curl -i 'http://localhost:8080/demo/unexpected'
@@ -77,11 +79,13 @@ curl -i 'http://localhost:8080/demo/unexpected'
 | --- | --- | --- |
 | 验证码 | BUSINESS | {"code":1001,"message":"验证码错误"} |
 | 密码 | BUSINESS | {"code":1002,"message":"账号或密码错误"} |
-| 锁定 | LOCKED | {"code":1003,"message":"账号已锁定，请联系管理员"} |
-| 空 name | VALIDATION | {"code":4001,"message":"请求参数不合法"} |
+| 普通锁定（/demo/business?type=locked） | BUSINESS | {"code":1003,"message":"账号已锁定，请联系管理员"} |
+| 子类优先级演示（/demo/locked） | LOCKED | {"code":1003,"message":"账号已锁定，请联系管理员"} |
+| 空 name | VALIDATION | {"code":4001,"message":"姓名不能为空"} |
 | 未知异常 | DEFAULT | {"code":5000,"message":"系统繁忙，请稍后重试"} |
 
 校验接口传入 {"name":"Ada"} 返回 {"code":0,"message":"成功"}。
+校验失败时返回注解中的第一条有效提示，没有有效提示时返回“请求参数不合法”。
 文章中的 GET /demo/captcha 也可直接运行，与验证码场景响应一致。
 
 所有上述响应为 HTTP 200，调用方及错误统计必须解析 code。统一响应格式与统一 HTTP 状态是独立选择，这只是演示沿用的项目协议。
@@ -90,18 +94,21 @@ curl -i 'http://localhost:8080/demo/unexpected'
 
 匹配方向是 registeredType.isAssignableFrom(actualException.getClass())，因此注册父类可以接收其子类。
 AccountLockedException 同时匹配 LOCKED（5）、BUSINESS（10）、DEFAULT（最大整数），选择 LOCKED。
+普通 BusinessException 即使携带 ACCOUNT_LOCKED，也只匹配 BUSINESS 和 DEFAULT，选择 BUSINESS；错误码不会让它匹配账号锁定子类规则。
 DEFAULT 故意放在枚举开头，证明不会按声明顺序分发。
 
 这是项目显式规定的数字优先级，不会自动计算继承距离，也不等于 Spring 的 @Order。
 Demo 只有一个 Advice。分发器按传入异常的直接类型匹配，不递归 cause；外层未知异常包裹业务异常时进入默认规则。
 注册表测试禁止重复优先级，并检查默认规则、策略 Bean 是否存在。重复优先级会产生歧义；缺失 Bean 或兜底会使请求处理失败。
 
-接口统一接收 Exception，业务策略中的向下转型依据注册表的匹配约束；修改映射时必须一并验证类型兼容。
+接口统一接收 Exception，各处理器通过 supportedType() 声明实际支持的异常类型。分发器在 @PostConstruct 初始化阶段检查 supportedType.isAssignableFrom(registeredType)，处理器支持范围必须覆盖注册类型及其子类，否则启动失败，并输出规则名、注册类型、处理器类型和支持类型。校验只读取类型声明，不执行处理逻辑，也不会在失败后改用默认处理器。
+
+例如，支持 BusinessException 的处理器可以接收注册的 AccountLockedException；反过来则不成立，因为仅支持账号锁定的处理器不能覆盖所有业务异常。此校验不能分析处理器方法体，supportedType() 必须如实描述实现能力；场景测试仍需验证实际转换行为。请求时仍按注册类型和优先级选择规则，不使用 supportedType() 重新分发。
 
 ## 如何扩展
 
 1. 仅增加业务错误语义：在 BusinessErrorCode 增加定义，业务位置抛 BusinessException，共用已有策略
-2. 确有不同转换行为：按需定义异常类型，实现 ExceptionHandlerStrategy 并注册为 @Component
+2. 确有不同转换行为：按需定义异常类型，实现 ExceptionHandlerStrategy，通过 supportedType() 声明支持类型并注册为 @Component
 3. 在枚举登记异常类型、处理器类型、唯一优先级
 4. 增加路由和请求测试，确认与父类和默认规则的关系
 
