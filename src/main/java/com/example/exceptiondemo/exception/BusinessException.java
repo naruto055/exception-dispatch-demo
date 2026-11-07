@@ -1,4 +1,6 @@
-package com.example.exceptiondemo;
+package com.example.exceptiondemo.exception;
+
+import com.example.exceptiondemo.exception.num.BusinessErrorCode;
 
 /** 携带业务错误定义的异常载体 */
 public class BusinessException extends RuntimeException {

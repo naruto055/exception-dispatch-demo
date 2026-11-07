@@ -1,4 +1,7 @@
-package com.example.exceptiondemo;
+package com.example.exceptiondemo.exception;
+
+import com.example.exceptiondemo.exception.num.ExceptionHandlerRegistry;
+import com.example.exceptiondemo.response.ApiResponse;
 
 import java.util.Arrays;
 import java.util.Comparator;

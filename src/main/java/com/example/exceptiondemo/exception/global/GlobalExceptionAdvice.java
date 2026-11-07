@@ -1,4 +1,8 @@
-package com.example.exceptiondemo;
+package com.example.exceptiondemo.exception.global;
+
+import com.example.exceptiondemo.exception.ExceptionDispatcher;
+import com.example.exceptiondemo.exception.num.ExceptionHandlerRegistry;
+import com.example.exceptiondemo.response.ApiResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;

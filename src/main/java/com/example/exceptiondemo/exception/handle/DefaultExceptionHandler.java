@@ -1,4 +1,7 @@
-package com.example.exceptiondemo;
+package com.example.exceptiondemo.exception.handle;
+
+import com.example.exceptiondemo.response.ApiResponse;
+import com.example.exceptiondemo.exception.ExceptionHandlerStrategy;
 
 import org.springframework.stereotype.Component;
 /** 未登记异常的默认转换策略 */

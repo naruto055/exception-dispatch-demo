@@ -1,4 +1,6 @@
-package com.example.exceptiondemo;
+package com.example.exceptiondemo.exception;
+
+import com.example.exceptiondemo.response.ApiResponse;
 
 /** 异常转换策略，不负责写出 HTTP 响应 */
 public interface ExceptionHandlerStrategy {

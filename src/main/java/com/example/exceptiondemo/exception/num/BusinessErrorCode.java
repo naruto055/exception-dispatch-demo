@@ -1,4 +1,4 @@
-package com.example.exceptiondemo;
+package com.example.exceptiondemo.exception.num;
 
 /** 业务错误定义与处理策略解耦 */
 public enum BusinessErrorCode {
